@@ -1,7 +1,0 @@
-﻿  main.cpp
-C:\Users\Ann\Documents\SDLSimple\SDLSimple\main.cpp(40,33): warning C4244: 'initializing': conversion from 'genType' to 'const float', possible loss of data
-          with
-          [
-              genType=double
-          ]
-  SDLSimple.vcxproj -> C:\Users\Ann\Documents\SDLSimple\Debug\SDLSimple.exe
