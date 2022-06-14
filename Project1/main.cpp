@@ -20,11 +20,10 @@
 const int WINDOW_WIDTH = 640,
 WINDOW_HEIGHT = 480;
 
-//can change bg color OR add image
-const float BG_RED = 0.1922f,
-BG_BLUE = 0.549f,
-BG_GREEN = 0.9059f,
-BG_OPACITY = 1.0f;
+const float BG_RED = 0.573f,
+            BG_BLUE = 0.784f,
+            BG_GREEN = 0.678f,
+            BG_OPACITY = 1.0f;
 
 const int VIEWPORT_X = 0,
 VIEWPORT_Y = 0,
@@ -34,12 +33,6 @@ VIEWPORT_HEIGHT = WINDOW_HEIGHT;
 //when we add sprites, add "_textured" 
 const char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
 F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
-
-//delete once we move to sprites
-const float TRIANGLE_RED = 1.0f,
-TRIANGLE_BLUE = 0.4f,
-TRIANGLE_GREEN = 0.4f,
-TRIANGLE_OPACITY = 1.0f;
 
 //prof vars
 const float GROWTH_FACTOR = 1.01f;
@@ -61,19 +54,44 @@ float triangle_rotate = 0.0f;
 float previous_ticks = 0.0f;
 
 //appx location of objs
-float vertices[] = //sun
+//THE COORDINATE PLANE (-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f)
+float vertices_sun[] = //sun
 {
     -4.f, 2.f, -3.f, 2.f, -3.f, 3.f, //triangle 1
     -4.f, 2.f, -3.f, 3.f, -4.f, 3.f  //triangle 2
 };
 
-float vertices2[] = //fairy
+float vertices_fairy[] = //fairy
 {
     -0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 1.5f, //triangle 1
     -0.5f, 0.5f, 0.5f, 1.5f, -0.5f, 1.5f //triangle 2
 };
 
-float texture_coordinates[] =
+float verticesbg[] = //background elements that take up the whole screen
+{
+    -5.f, -3.75f, 5.f, -3.75f, 5.f, 3.75f, //triangle 1
+    -5.f, -3.75f, 5.f, 3.75f, -5.f, 3.75f //triangle 2
+};
+
+float vertices_mtree[] = //medium tree
+{
+    2.f, -3.75f, 2.5f, -3.75f, 2.5f, 3.75f, //triangle 1
+    2.f, -3.75f, 2.5f, 3.75f, 2.f, 3.75f //triangle 2
+};
+
+float vertices_ltree[] = //large tree
+{
+    -3.f, -3.75f, -.25f, -3.75f, -.25f, 3.75f, //triangle 1
+    -3.f, -3.75f, -.25f, 3.75f, -3.f, 3.75f //triangle 2
+};
+
+float vertices_grass[] = //foreground grass
+{
+    -5.f, -3.75f, 5.f, -3.75f, 5.f,-1.125f, //triangle 1
+    -5.f, -3.75f, 5.f, -1.125f, -5.f, -1.125f //triangle 2
+};
+
+float texture_coordinates[] = //uv coordinates that remain consistent for each sprite
 {
     0.f, 1.f, 1.f, 1.f, 1.f, 0.f, //triangle 1
     0.f, 1.f, 1.f, 0.f, 0.f, 0.f //triangle 2
@@ -81,8 +99,16 @@ float texture_coordinates[] =
 
 const char FAIRY_SPRITE[] = "fairy-sprite.png";
 const char SUN_SPRITE[] = "sun-sprite.png";
-GLuint fairy_texture_id, sun_texture_id;
+const char BACKGROUND_SPRITE[] = "background-sprite.png";
+const char SUNLIGHT_SPRITE[] = "sunlight-sprite.png";
+const char MED_TREE_SPRITE[] = "med-tree-sprite.png";
+const char LARGE_TREE_SPRITE[] = "big-tree-sprite.png";
+const char GRASS_SPRITE[] = "front-grass-sprite.png";
 
+GLuint fairy_texture_id, sun_texture_id, 
+       background_texture_id, sunlight_texture_id,
+       med_tree_texture_id, large_tree_texture_id,
+       grass_texture_id;
 
 bool is_growing = true;
 
@@ -94,7 +120,7 @@ bool hit_boundary_x_max = false;
 bool hit_boundary_y_max = false;
 
 ShaderProgram program;
-glm::mat4 view_matrix, model_matrix2, model_matrix1, projection_matrix; //need for now bc we don't use the class yet
+glm::mat4 view_matrix, model_matrix2, model_matrix1, model_matrix_bg, projection_matrix; //need for now bc we don't use the class yet
 
 //functions
 GLuint load_texture(const char* filepath) {
@@ -144,10 +170,17 @@ void initialise()
 
     fairy_texture_id = load_texture(FAIRY_SPRITE);
     sun_texture_id = load_texture(SUN_SPRITE);
+    background_texture_id = load_texture(BACKGROUND_SPRITE);
+    sunlight_texture_id = load_texture(SUNLIGHT_SPRITE);
+    med_tree_texture_id = load_texture(MED_TREE_SPRITE);
+    large_tree_texture_id = load_texture(LARGE_TREE_SPRITE);
+    grass_texture_id = load_texture(GRASS_SPRITE);
 
     view_matrix = glm::mat4(1.0f);  // Defines the position (location and orientation) of the camera
-    model_matrix1 = glm::mat4(1.0f);  // Defines every translation, rotations, or scaling applied to an object
-    model_matrix2= glm::mat4(1.0f);  // Defines every translation, rotations, or scaling applied to an object
+
+    model_matrix1 = glm::mat4(1.0f);  // Defines every translation, rotations, or scaling applied to sun object
+    model_matrix2= glm::mat4(1.0f);  // Defines every translation, rotations, or scaling applied to fairy object
+    model_matrix_bg = glm::mat4(1.0f);  // Defines every translation, rotations, or scaling applied bg objects
 
     projection_matrix = glm::ortho(-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f);  // Defines the characteristics of your camera, such as clip planes, field of view, projection method etc.
 
@@ -155,7 +188,7 @@ void initialise()
     program.SetViewMatrix(view_matrix);
     // Notice we haven't set our model matrix yet!
 
-    program.SetColor(TRIANGLE_RED, TRIANGLE_BLUE, TRIANGLE_GREEN, TRIANGLE_OPACITY);
+    //program.SetColor(TRIANGLE_RED, TRIANGLE_BLUE, TRIANGLE_GREEN, TRIANGLE_OPACITY);
 
     glUseProgram(program.programID);
 
@@ -210,19 +243,19 @@ void update()
  
     //translation and bouncing around screen
     //borders
-    if (model_matrix2[3].x + vertices2[2] - 1.5f >= 3.f) {
+    if (model_matrix2[3].x + vertices_fairy[2] - 1.5f >= 3.f) {
         hit_boundary_x_max = true;
         //hit_boundary_x_min = false;
     }
-    if (model_matrix2[3].x + vertices2[4] + 2.f <= -3.f) {
+    if (model_matrix2[3].x + vertices_fairy[4] + 2.f <= -3.f) {
         hit_boundary_x_max = false;
         //hit_boundary_x_min = true;
     }
-    if (model_matrix2[3].y + vertices2[1] >= 3.f) {
+    if (model_matrix2[3].y + vertices_fairy[1] >= 3.f) {
         hit_boundary_y_max = true;
         //hit_boundary_y_min = false;
     }
-    if (model_matrix2[3].y + vertices2[1] + 1 <= -3.f) {
+    if (model_matrix2[3].y + vertices_fairy[1] + 1 <= -3.f) {
         hit_boundary_y_max = false;
         //hit_boundary_y_min = true;
     }
@@ -237,10 +270,10 @@ void update()
                                    glm::vec3(_TRANS_VAL_X, _TRANS_VAL_Y, 0.0f));
     
     //printing function that works
-    _RPTF2(_CRT_WARN,"coord x: %f, y: %f z: %f\n",
-           model_matrix2[3].x,
-           model_matrix2[3].y,
-           model_matrix2[3].z);
+    //_RPTF2(_CRT_WARN,"coord x: %f, y: %f z: %f\n",
+    //       model_matrix2[3].x,
+    //       model_matrix2[3].y,
+    //       model_matrix2[3].z);
 }
 
 void draw_object(glm::mat4& object_model_matrix, GLuint& object_texture_id)
@@ -253,7 +286,25 @@ void draw_object(glm::mat4& object_model_matrix, GLuint& object_texture_id)
 void render() {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices);
+    //drawing background elements behind sprites
+    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, verticesbg);
+    glEnableVertexAttribArray(program.positionAttribute);
+
+    glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+    glEnableVertexAttribArray(program.texCoordAttribute);
+
+    draw_object(model_matrix_bg, background_texture_id);
+
+    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, verticesbg);
+    glEnableVertexAttribArray(program.positionAttribute);
+
+    glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+    glEnableVertexAttribArray(program.texCoordAttribute);
+
+    draw_object(model_matrix_bg, sunlight_texture_id);
+
+    //draw sun sprite
+    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_sun);
     glEnableVertexAttribArray(program.positionAttribute);
 
     glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
@@ -261,15 +312,39 @@ void render() {
 
     draw_object(model_matrix1, sun_texture_id);
 
-    //object 2
-
-    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices2);
+    //draw fairy sprite
+    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_fairy);
     glEnableVertexAttribArray(program.positionAttribute);
 
     glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
     glEnableVertexAttribArray(program.texCoordAttribute);
     
     draw_object(model_matrix2, fairy_texture_id);
+
+    //foreground objects
+    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_mtree);
+    glEnableVertexAttribArray(program.positionAttribute);
+
+    glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+    glEnableVertexAttribArray(program.texCoordAttribute);
+
+    draw_object(model_matrix_bg, med_tree_texture_id);
+
+    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_ltree);
+    glEnableVertexAttribArray(program.positionAttribute);
+
+    glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+    glEnableVertexAttribArray(program.texCoordAttribute);
+
+    draw_object(model_matrix_bg, large_tree_texture_id);
+    
+    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_grass);
+    glEnableVertexAttribArray(program.positionAttribute);
+
+    glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+    glEnableVertexAttribArray(program.texCoordAttribute);
+
+    draw_object(model_matrix_bg, grass_texture_id);
 
     glDisableVertexAttribArray(program.positionAttribute);
     glDisableVertexAttribArray(program.texCoordAttribute);
