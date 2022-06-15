@@ -97,6 +97,7 @@ float texture_coordinates[] = //uv coordinates that remain consistent for each s
     0.f, 1.f, 1.f, 0.f, 0.f, 0.f //triangle 2
 };
 
+//sprite images
 const char FAIRY_SPRITE[] = "fairy-sprite.png";
 const char SUN_SPRITE[] = "sun-sprite.png";
 const char BACKGROUND_SPRITE[] = "background-sprite.png";
@@ -105,19 +106,20 @@ const char MED_TREE_SPRITE[] = "med-tree-sprite.png";
 const char LARGE_TREE_SPRITE[] = "big-tree-sprite.png";
 const char GRASS_SPRITE[] = "front-grass-sprite.png";
 
+//texture ids
 GLuint fairy_texture_id, sun_texture_id, 
        background_texture_id, sunlight_texture_id,
        med_tree_texture_id, large_tree_texture_id,
        grass_texture_id;
 
+//bools
 bool is_growing = true;
+bool hit_boundary_x_max = false;
+bool hit_boundary_y_max = false;
+bool game_is_running = true;
 
 //cont. of mine
 SDL_Window* display_window;
-bool game_is_running = true;
-
-bool hit_boundary_x_max = false;
-bool hit_boundary_y_max = false;
 
 ShaderProgram program;
 glm::mat4 view_matrix, model_matrix2, model_matrix1, model_matrix_bg, projection_matrix; //need for now bc we don't use the class yet
@@ -242,20 +244,21 @@ void update()
     //fairy transformations
  
     //translation and bouncing around screen
+    //THE COORDINATE PLANE (-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f)
     //borders
-    if (model_matrix2[3].x + vertices_fairy[2] - 1.5f >= 3.f) {
+    if (model_matrix2[3].x + vertices_fairy[2] >= 5.f) {
         hit_boundary_x_max = true;
         //hit_boundary_x_min = false;
     }
-    if (model_matrix2[3].x + vertices_fairy[4] + 2.f <= -3.f) {
+    if (model_matrix2[3].x + vertices_fairy[0] <= -5.f) {
         hit_boundary_x_max = false;
         //hit_boundary_x_min = true;
     }
-    if (model_matrix2[3].y + vertices_fairy[1] >= 3.f) {
+    if (model_matrix2[3].y + vertices_fairy[5] >= 3.75f){
         hit_boundary_y_max = true;
         //hit_boundary_y_min = false;
     }
-    if (model_matrix2[3].y + vertices_fairy[1] + 1 <= -3.f) {
+    if (model_matrix2[3].y + vertices_fairy[1] <= -3.75f){
         hit_boundary_y_max = false;
         //hit_boundary_y_min = true;
     }
@@ -270,10 +273,10 @@ void update()
                                    glm::vec3(_TRANS_VAL_X, _TRANS_VAL_Y, 0.0f));
     
     //printing function that works
-    //_RPTF2(_CRT_WARN,"coord x: %f, y: %f z: %f\n",
-    //       model_matrix2[3].x,
-    //       model_matrix2[3].y,
-    //       model_matrix2[3].z);
+    _RPTF2(_CRT_WARN,"coord x: %f, y: %f z: %f\n",
+         model_matrix2[3].x,
+           model_matrix2[3].y,
+           model_matrix2[3].z);
 }
 
 void draw_object(glm::mat4& object_model_matrix, GLuint& object_texture_id)
@@ -312,6 +315,25 @@ void render() {
 
     draw_object(model_matrix1, sun_texture_id);
 
+    //trees behind fairy sprite when going right
+    if (hit_boundary_x_max == false){
+        glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_mtree);
+        glEnableVertexAttribArray(program.positionAttribute);
+
+        glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+        glEnableVertexAttribArray(program.texCoordAttribute);
+
+        draw_object(model_matrix_bg, med_tree_texture_id);
+
+        glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_ltree);
+        glEnableVertexAttribArray(program.positionAttribute);
+
+        glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+        glEnableVertexAttribArray(program.texCoordAttribute);
+
+        draw_object(model_matrix_bg, large_tree_texture_id);
+    }
+
     //draw fairy sprite
     glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_fairy);
     glEnableVertexAttribArray(program.positionAttribute);
@@ -322,22 +344,26 @@ void render() {
     draw_object(model_matrix2, fairy_texture_id);
 
     //foreground objects
-    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_mtree);
-    glEnableVertexAttribArray(program.positionAttribute);
 
-    glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
-    glEnableVertexAttribArray(program.texCoordAttribute);
+    //trees in front of fairy sprite when going left
+    if(hit_boundary_x_max == true){
+        glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_mtree);
+        glEnableVertexAttribArray(program.positionAttribute);
 
-    draw_object(model_matrix_bg, med_tree_texture_id);
+        glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+        glEnableVertexAttribArray(program.texCoordAttribute);
 
-    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_ltree);
-    glEnableVertexAttribArray(program.positionAttribute);
+        draw_object(model_matrix_bg, med_tree_texture_id);
 
-    glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
-    glEnableVertexAttribArray(program.texCoordAttribute);
+        glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_ltree);
+        glEnableVertexAttribArray(program.positionAttribute);
 
-    draw_object(model_matrix_bg, large_tree_texture_id);
-    
+        glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+        glEnableVertexAttribArray(program.texCoordAttribute);
+
+        draw_object(model_matrix_bg, large_tree_texture_id);
+    }
+    //grass
     glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_grass);
     glEnableVertexAttribArray(program.positionAttribute);
 
@@ -354,9 +380,6 @@ void render() {
 
 void shutdown() { SDL_Quit(); }
 
-/**
- Start here—we can see the general structure of a game loop without worrying too much about the details yet.
- */
 int main(int argc, char* argv[])
 {
     initialise();
