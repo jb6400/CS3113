@@ -37,10 +37,12 @@ F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 //prof vars
 const float GROWTH_FACTOR = 1.01f;
 const float SHRINK_FACTOR = 0.99f;
+const float SCALE_FACTOR = 1.f;
+float g_scale = 1;
 const int MAX_FRAME = 40;
 int frame_num = 0;
-const float ROT_ANGLE = glm::radians(1.5f);
-const float TRANS_VALUE = 0.025f;
+const float ROT_ANGLE = 90.f;
+const float TRANS_VALUE = .75f;
 
 const float MILLISECONDS_IN_SECOND = 1000.0;
 const float DEGREES_PER_SECOND = 90.0f;
@@ -49,8 +51,6 @@ const int NUMBER_OF_TEXTURES = 1; // to be generated, that is
 const GLint LEVEL_OF_DETAIL = 0;  // base image level; Level n is the nth mipmap reduction image
 const GLint TEXTURE_BORDER = 0;   // this value MUST be zero
 
-float triangle_x = 0.0f;
-float triangle_rotate = 0.0f;
 float previous_ticks = 0.0f;
 
 //appx location of objs
@@ -123,6 +123,9 @@ SDL_Window* display_window;
 
 ShaderProgram program;
 glm::mat4 view_matrix, model_matrix2, model_matrix1, model_matrix_bg, projection_matrix; //need for now bc we don't use the class yet
+const glm::mat4 MIN_SIZE = glm::mat4(1.0f);
+const glm::mat4 MAX_SIZE = glm::mat4(4.0f);
+glm::mat4 GOAL_SIZE = MAX_SIZE;
 
 //functions
 GLuint load_texture(const char* filepath) {
@@ -211,6 +214,8 @@ void process_input()
 
 void update()
 {
+    //model_matrix1 = glm::mat4(1.f);
+    //model_matrix2 = glm::mat4(1.f);
     //defining values based off of global vars
     float _TRANS_VAL_X = TRANS_VALUE, _TRANS_VAL_Y = TRANS_VALUE;
 
@@ -219,25 +224,50 @@ void update()
     float delta_time = ticks - previous_ticks; // the delta time is the difference from the last frame
     previous_ticks = ticks;
 
+
+
     //sun transformations
     
     //rotation on own axis
     glm::vec3 pivot = glm::vec3(-3.5f, 2.5f, 0);
-    auto res_rotate = glm::translate(glm::mat4(1.f), pivot) * glm::rotate(glm::mat4(1.f), ROT_ANGLE, glm::vec3(0, 0, 0.1f)) * glm::translate(glm::mat4(1.f), -pivot);
+    auto res_rotate = glm::translate(glm::mat4(1.f), pivot) * glm::rotate(glm::mat4(1.f), 
+                      glm::radians(ROT_ANGLE*delta_time), 
+                      glm::vec3(0, 0, 1.f)) * glm::translate(glm::mat4(1.f), -pivot);
     model_matrix1 = model_matrix1 * res_rotate;
 
     //scaling (beating exercise from class)
-    ++frame_num;
 
-    if (frame_num >= MAX_FRAME) {
+
+
+    
+   /* if (model_matrix1[0][0] > MAX_SIZE[0][0]) {
+        model_matrix1 = MAX_SIZE;
         is_growing = !is_growing;
-        frame_num = 0;
+
     }
+    if (model_matrix1[0][0] < MIN_SIZE[0][0]) {
+        model_matrix1 = MIN_SIZE;
+        is_growing = !is_growing;
 
-    glm::vec3 scale_vector = glm::vec3(is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
-        is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
-        1.f);
+    }*/
 
+    //make values into constants
+    auto scale_action = (is_growing ? 1 + SCALE_FACTOR*delta_time : 1 - SCALE_FACTOR*delta_time);
+    g_scale *= scale_action;
+     if (g_scale>2) {
+         g_scale = 2;
+         is_growing = !is_growing;
+     }
+     if (g_scale < 1) {
+         g_scale = 1;
+         is_growing = !is_growing;
+     }
+    _RPTF2(_CRT_WARN, "g_scale: %f\n", g_scale);
+    glm::vec3 scale_vector = glm::vec3(scale_action, scale_action, 1.f);
+    /*glm::vec3 scale_vector = glm::vec3(is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
+                                       is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
+                                       1.f);*/
+    //growth_factor_d : shrink_factor_d
     auto res_scale = glm::translate(glm::mat4(1.f), pivot) * glm::scale(glm::mat4(1.f), scale_vector) * glm::translate(glm::mat4(1.f), -pivot);
     model_matrix1 = model_matrix1 * res_scale;
 
@@ -248,19 +278,15 @@ void update()
     //borders
     if (model_matrix2[3].x + vertices_fairy[2] >= 5.f) {
         hit_boundary_x_max = true;
-        //hit_boundary_x_min = false;
     }
     if (model_matrix2[3].x + vertices_fairy[0] <= -5.f) {
         hit_boundary_x_max = false;
-        //hit_boundary_x_min = true;
     }
     if (model_matrix2[3].y + vertices_fairy[5] >= 3.75f){
         hit_boundary_y_max = true;
-        //hit_boundary_y_min = false;
     }
     if (model_matrix2[3].y + vertices_fairy[1] <= -3.75f){
         hit_boundary_y_max = false;
-        //hit_boundary_y_min = true;
     }
 
     //modifying value
@@ -270,13 +296,13 @@ void update()
         _TRANS_VAL_Y = -TRANS_VALUE;
 
     model_matrix2 = glm::translate(model_matrix2,  
-                                   glm::vec3(_TRANS_VAL_X, _TRANS_VAL_Y, 0.0f));
+                                   glm::vec3(_TRANS_VAL_X * delta_time, _TRANS_VAL_Y * delta_time, 0.0f));
     
     //printing function that works
-    _RPTF2(_CRT_WARN,"coord x: %f, y: %f z: %f\n",
+    /*_RPTF2(_CRT_WARN, "coord x: %f, y: %f z: %f\n",
          model_matrix2[3].x,
            model_matrix2[3].y,
-           model_matrix2[3].z);
+           model_matrix2[3].z);*/
 }
 
 void draw_object(glm::mat4& object_model_matrix, GLuint& object_texture_id)
@@ -389,7 +415,7 @@ int main(int argc, char* argv[])
         process_input();
         update();
         render();
-        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(30));
     }
 
     shutdown();
