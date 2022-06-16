@@ -17,6 +17,8 @@
 #include <chrono>
 
 //variables
+
+//vars for openGL
 const int WINDOW_WIDTH = 640,
 WINDOW_HEIGHT = 480;
 
@@ -26,21 +28,20 @@ const float BG_RED = 0.573f,
             BG_OPACITY = 1.0f;
 
 const int VIEWPORT_X = 0,
-VIEWPORT_Y = 0,
-VIEWPORT_WIDTH = WINDOW_WIDTH,
-VIEWPORT_HEIGHT = WINDOW_HEIGHT;
+          VIEWPORT_Y = 0,
+          VIEWPORT_WIDTH = WINDOW_WIDTH,
+          VIEWPORT_HEIGHT = WINDOW_HEIGHT;
 
-//when we add sprites, add "_textured" 
 const char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
-F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
+           F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 
-//prof vars
-const float GROWTH_FACTOR = 1.01f;
-const float SHRINK_FACTOR = 0.99f;
+SDL_Window* display_window;
+
+ShaderProgram program;
+
+//constants and float values
 const float SCALE_FACTOR = 1.f;
 float g_scale = 1;
-const int MAX_FRAME = 40;
-int frame_num = 0;
 const float ROT_ANGLE = 90.f;
 const float TRANS_VALUE = .75f;
 
@@ -53,8 +54,7 @@ const GLint TEXTURE_BORDER = 0;   // this value MUST be zero
 
 float previous_ticks = 0.0f;
 
-//appx location of objs
-//THE COORDINATE PLANE (-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f)
+//appx location of objs in scene
 float vertices_sun[] = //sun
 {
     -4.f, 2.f, -3.f, 2.f, -3.f, 3.f, //triangle 1
@@ -118,22 +118,43 @@ bool hit_boundary_x_max = false;
 bool hit_boundary_y_max = false;
 bool game_is_running = true;
 
-//cont. of mine
-SDL_Window* display_window;
-
-ShaderProgram program;
+//matrices
 glm::mat4 view_matrix, model_matrix2, model_matrix1, model_matrix_bg, projection_matrix; //need for now bc we don't use the class yet
 const glm::mat4 MIN_SIZE = glm::mat4(1.0f);
 const glm::mat4 MAX_SIZE = glm::mat4(4.0f);
 glm::mat4 GOAL_SIZE = MAX_SIZE;
 
+//function prototypes
+GLuint load_texture(const char* filepath);
+void initialise();
+void process_input();
+void update();
+void draw_object(glm::mat4& object_model_matrix, GLuint& object_texture_id);
+void render();
+void shutdown();
+
 //functions
+int main(int argc, char* argv[])
+{
+    initialise();
+
+    while (game_is_running)
+    {
+        process_input();
+        update();
+        render();
+    }
+
+    shutdown();
+    return 0;
+}
+
 GLuint load_texture(const char* filepath) {
     int width, height, number_of_components;
     unsigned char* image = stbi_load(filepath, &width, &height, &number_of_components, STBI_rgb_alpha);
 
     if (image == NULL) {
-        //insert print function
+        //as of right now, can't print
         assert(false);
     }
 
@@ -172,7 +193,8 @@ void initialise()
     //enable blending
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+    
+    //load all the sprites
     fairy_texture_id = load_texture(FAIRY_SPRITE);
     sun_texture_id = load_texture(SUN_SPRITE);
     background_texture_id = load_texture(BACKGROUND_SPRITE);
@@ -181,6 +203,7 @@ void initialise()
     large_tree_texture_id = load_texture(LARGE_TREE_SPRITE);
     grass_texture_id = load_texture(GRASS_SPRITE);
 
+    //matrix definition
     view_matrix = glm::mat4(1.0f);  // Defines the position (location and orientation) of the camera
 
     model_matrix1 = glm::mat4(1.0f);  // Defines every translation, rotations, or scaling applied to sun object
@@ -191,9 +214,6 @@ void initialise()
 
     program.SetProjectionMatrix(projection_matrix);
     program.SetViewMatrix(view_matrix);
-    // Notice we haven't set our model matrix yet!
-
-    //program.SetColor(TRIANGLE_RED, TRIANGLE_BLUE, TRIANGLE_GREEN, TRIANGLE_OPACITY);
 
     glUseProgram(program.programID);
 
@@ -214,8 +234,6 @@ void process_input()
 
 void update()
 {
-    //model_matrix1 = glm::mat4(1.f);
-    //model_matrix2 = glm::mat4(1.f);
     //defining values based off of global vars
     float _TRANS_VAL_X = TRANS_VALUE, _TRANS_VAL_Y = TRANS_VALUE;
 
@@ -224,10 +242,8 @@ void update()
     float delta_time = ticks - previous_ticks; // the delta time is the difference from the last frame
     previous_ticks = ticks;
 
-
-
     //sun transformations
-    
+  
     //rotation on own axis
     glm::vec3 pivot = glm::vec3(-3.5f, 2.5f, 0);
     auto res_rotate = glm::translate(glm::mat4(1.f), pivot) * glm::rotate(glm::mat4(1.f), 
@@ -236,22 +252,6 @@ void update()
     model_matrix1 = model_matrix1 * res_rotate;
 
     //scaling (beating exercise from class)
-
-
-
-    
-   /* if (model_matrix1[0][0] > MAX_SIZE[0][0]) {
-        model_matrix1 = MAX_SIZE;
-        is_growing = !is_growing;
-
-    }
-    if (model_matrix1[0][0] < MIN_SIZE[0][0]) {
-        model_matrix1 = MIN_SIZE;
-        is_growing = !is_growing;
-
-    }*/
-
-    //make values into constants
     auto scale_action = (is_growing ? 1 + SCALE_FACTOR*delta_time : 1 - SCALE_FACTOR*delta_time);
     g_scale *= scale_action;
      if (g_scale>2) {
@@ -262,19 +262,13 @@ void update()
          g_scale = 1;
          is_growing = !is_growing;
      }
-    _RPTF2(_CRT_WARN, "g_scale: %f\n", g_scale);
     glm::vec3 scale_vector = glm::vec3(scale_action, scale_action, 1.f);
-    /*glm::vec3 scale_vector = glm::vec3(is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
-                                       is_growing ? GROWTH_FACTOR : SHRINK_FACTOR,
-                                       1.f);*/
-    //growth_factor_d : shrink_factor_d
     auto res_scale = glm::translate(glm::mat4(1.f), pivot) * glm::scale(glm::mat4(1.f), scale_vector) * glm::translate(glm::mat4(1.f), -pivot);
     model_matrix1 = model_matrix1 * res_scale;
 
     //fairy transformations
  
-    //translation and bouncing around screen
-    //THE COORDINATE PLANE (-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f)
+    //translation and bouncing around screen 
     //borders
     if (model_matrix2[3].x + vertices_fairy[2] >= 5.f) {
         hit_boundary_x_max = true;
@@ -296,13 +290,9 @@ void update()
         _TRANS_VAL_Y = -TRANS_VALUE;
 
     model_matrix2 = glm::translate(model_matrix2,  
-                                   glm::vec3(_TRANS_VAL_X * delta_time, _TRANS_VAL_Y * delta_time, 0.0f));
-    
-    //printing function that works
-    /*_RPTF2(_CRT_WARN, "coord x: %f, y: %f z: %f\n",
-         model_matrix2[3].x,
-           model_matrix2[3].y,
-           model_matrix2[3].z);*/
+                                   glm::vec3(_TRANS_VAL_X * delta_time, 
+                                   _TRANS_VAL_Y * delta_time, 0.0f));
+ 
 }
 
 void draw_object(glm::mat4& object_model_matrix, GLuint& object_texture_id)
@@ -405,19 +395,3 @@ void render() {
 }
 
 void shutdown() { SDL_Quit(); }
-
-int main(int argc, char* argv[])
-{
-    initialise();
-
-    while (game_is_running)
-    {
-        process_input();
-        update();
-        render();
-        //std::this_thread::sleep_for(std::chrono::milliseconds(30));
-    }
-
-    shutdown();
-    return 0;
-}
