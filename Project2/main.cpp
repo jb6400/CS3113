@@ -16,7 +16,7 @@
 const int WINDOW_WIDTH = 640,
 WINDOW_HEIGHT = 480;
 
-const float BG_RED = 0, BG_BLUE = 0.302f, BG_GREEN = 0;
+const float BG_RED = 0.62f, BG_BLUE = 0.929f, BG_GREEN = 0.804f;
 const float BG_OPACITY = 1.0f;
 
 const int VIEWPORT_X = 0,
@@ -24,16 +24,9 @@ VIEWPORT_Y = 0,
 VIEWPORT_WIDTH = WINDOW_WIDTH,
 VIEWPORT_HEIGHT = WINDOW_HEIGHT;
 
-const char V_SHADER_PATH[] = "shaders/vertex.glsl",
-F_SHADER_PATH[] = "shaders/fragment.glsl";
+const char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
+	       F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 
-float SCALE_FACTOR = 1.001f;
-const glm::mat4 MIN_SIZE = glm::mat4(1.0f);
-const glm::mat4 MAX_SIZE = glm::mat4(4.0f);
-glm::mat4 GOAL_SIZE = MAX_SIZE;
-
-const float ROT_ANGLE = glm::radians(1.5f);
-const float INIT_TRIANGLE_ANGLE = glm::radians(45.0); //always radians
 
 SDL_Window* display_window;
 bool game_is_running = true;
@@ -61,6 +54,40 @@ const float MINIMUM_COLLISION_DISTANCE_PLAYER = 1.f;
 float BALL_X_TRANS = .5f;
 float BALL_Y_TRANS = 1.f;
 
+const char ICE_SPRITE[] = "Large_Frost_Sprite_0.png";
+const char PLAYER_1_SPRITE[] = "player-1-sprite.png";
+const char PLAYER_2_SPRITE[] = "player-2-sprite.png";
+const char SIDE_BORDER_SPRITE[] = "side-border.png";
+const char TOP_BORDER_SPRITE[] = "top-bot-border.png";
+
+GLuint ice_texture_id, player_1_texture_id, player_2_texture_id,
+	   side_border_texture_id, top_border_texture_id;
+
+const int NUMBER_OF_TEXTURES = 1; // to be generated, that is
+const GLint LEVEL_OF_DETAIL = 0;  // base image level; Level n is the nth mipmap reduction image
+const GLint TEXTURE_BORDER = 0;   // this value MUST be zero
+
+GLuint load_texture(const char* filepath) {
+	int width, height, number_of_components;
+	unsigned char* image = stbi_load(filepath, &width, &height, &number_of_components, STBI_rgb_alpha);
+
+	if (image == NULL) {
+		//as of right now, can't print
+		assert(false);
+	}
+
+	GLuint textureID;
+	glGenTextures(NUMBER_OF_TEXTURES, &textureID);
+	glBindTexture(GL_TEXTURE_2D, textureID);
+	glTexImage2D(GL_TEXTURE_2D, LEVEL_OF_DETAIL, GL_RGBA, width, height, TEXTURE_BORDER, GL_RGBA, GL_UNSIGNED_BYTE, image);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	stbi_image_free(image);
+
+	return textureID;
+}
 void initialise() {
 	SDL_Init(SDL_INIT_VIDEO);
 	display_window = SDL_CreateWindow("Project 2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -74,6 +101,16 @@ void initialise() {
 
 	glViewport(VIEWPORT_X, VIEWPORT_Y, VIEWPORT_WIDTH, VIEWPORT_HEIGHT); // Init camera
 	program.Load(V_SHADER_PATH, F_SHADER_PATH); // Loads up shaders
+
+	//enable blending
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	ice_texture_id = load_texture(ICE_SPRITE);
+	player_1_texture_id = load_texture(PLAYER_1_SPRITE);
+	player_2_texture_id = load_texture(PLAYER_2_SPRITE);
+	side_border_texture_id = load_texture(SIDE_BORDER_SPRITE);
+	top_border_texture_id = load_texture(TOP_BORDER_SPRITE);
 
 	// Init view, model, and proj. matricies
 	view_matrix = glm::mat4(1.f); // Identify 4x matrix
@@ -252,6 +289,12 @@ void update() {
 	player2_movement = glm::vec3(0, 0, 0); 
 
 }
+void draw_object(glm::mat4& object_model_matrix, GLuint& object_texture_id)
+{
+	program.SetModelMatrix(object_model_matrix);
+	glBindTexture(GL_TEXTURE_2D, object_texture_id);
+	glDrawArrays(GL_TRIANGLES, 0, 6); // we are now drawing 2 triangles, so we use 6 instead of 3
+}
 void render() {
 	//STEP 1
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -262,66 +305,101 @@ void render() {
 	//player 1 sprite
 	float vertices_p1[] = 
 	{ 
-		-4.f, -1.f, -3.5f, -1.f, -3.5f, 1.f, //triangle1
-		-4.f, -1.f, -3.5f, 1.f, -4.f, 1.f   //triangle2
+		-4.25f, -1.f, -3.4f, -1.f, -3.4f, 1.f, //triangle1
+		-4.25f, -1.f, -3.4f, 1.f, -4.25f, 1.f   //triangle2
+	};
+
+	float texture_coordinates[] =
+	{
+		0.f, 1.f, 1.f, 1.f, 1.f, 0.f, //triangle 1
+		0.f, 1.f, 1.f, 0.f, 0.f, 0.f //triangle 2
 	};
 
 	glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_p1);
 	glEnableVertexAttribArray(program.positionAttribute);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+	glEnableVertexAttribArray(program.texCoordAttribute);
+
+	draw_object(model_matrix_p1, player_1_texture_id);
 
 	program.SetModelMatrix(model_matrix_p2);
 
 	//player 2 sprite
 	float vertices_p2[] =
 	{
-		4.f, -1.f, 3.5f, -1.f, 3.5f, 1.f, //triangle1
-		4.f, -1.f, 3.5f, 1.f, 4.f, 1.f   //triangle2
+		4.25f, -1.f, 3.4f, -1.f, 3.4f, 1.f, //triangle1
+		4.25f, -1.f, 3.4f, 1.f, 4.25f, 1.f   //triangle2
 	};
 
 	glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_p2);
 	glEnableVertexAttribArray(program.positionAttribute);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+	glEnableVertexAttribArray(program.texCoordAttribute);
+
+	draw_object(model_matrix_p2, player_2_texture_id);
 	
 	//borders
 	program.SetModelMatrix(model_matrix_border);
 
 	float vertices_b_top[] = 
 	{
-		-5.f, 3.5f, 5.f, 3.5f, 5.f, 3.75f, //triangle1
-		-5.f, 3.5f, 5.f, 3.75f, -5.f, 3.75f   //triangle2
+		-5.f, 2.85f, 5.f, 2.85f, 5.f, 3.75f, //triangle1
+		-5.f, 2.85f, 5.f, 3.75f, -5.f, 3.75f   //triangle2
 	};
 	float vertices_b_right[] = 
 	{
-		4.75f, -3.5f, 5.f, -3.5f, 5.f, 3.5f, //triangle1
-		4.75f, -3.5f, 5.f, 3.5f, 4.75f, 3.5f   //triangle2
+		4.5f, -3.5f, 5.f, -3.5f, 5.f, 3.5f, //triangle1
+		4.5f, -3.5f, 5.f, 3.5f, 4.5f, 3.5f   //triangle2
 	};
 	float vertices_b_bot[] =
 	{
-		-5.f, -3.5f, 5.f, -3.5f, 5.f, -3.75f, //triangle1
-		-5.f, -3.5f, 5.f, -3.75f, -5.f, -3.75f   //triangle2
+		-5.f, -2.85f, 5.f, -2.85f, 5.f, -3.75f, //triangle1
+		-5.f, -2.85f, 5.f, -3.75f, -5.f, -3.75f   //triangle2
 	};
 	float vertices_b_left[] =
 	{
-		-4.75f, -3.5f, -5.f, -3.5f, -5.f, 3.5f, //triangle1
-		-4.75f, -3.5f, -5.f, 3.5f, -4.75f, 3.5f   //triangle2
+		-4.5f, -3.5f, -5.f, -3.5f, -5.f, 3.5f, //triangle1
+		-4.5f, -3.5f, -5.f, 3.5f, -4.5f, 3.5f   //triangle2
+	};
+	float texture_inverse_coordinates[] =
+	{
+		0.f, 1.f, -1.f, 1.f, -1.f, 0.f, //triangle 1
+		0.f, 1.f, -1.f, 0.f, 0.f, 0.f //triangle 2
 	};
 
 	glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_b_top);
 	glEnableVertexAttribArray(program.positionAttribute);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+	glEnableVertexAttribArray(program.texCoordAttribute);
+
+	draw_object(model_matrix_border, top_border_texture_id);
 
 	glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_b_right);
 	glEnableVertexAttribArray(program.positionAttribute);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_inverse_coordinates);
+	glEnableVertexAttribArray(program.texCoordAttribute);
+
+	draw_object(model_matrix_border, side_border_texture_id);
 
 	glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_b_bot);
 	glEnableVertexAttribArray(program.positionAttribute);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+	
+	glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+	glEnableVertexAttribArray(program.texCoordAttribute);
+
+	draw_object(model_matrix_border, top_border_texture_id);
 
 	glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_b_left);
 	glEnableVertexAttribArray(program.positionAttribute);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+	
+	glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_inverse_coordinates);
+	glEnableVertexAttribArray(program.texCoordAttribute);
+
+	draw_object(model_matrix_border, side_border_texture_id);
 
 	//ball
 
@@ -329,13 +407,17 @@ void render() {
 
 	float vertices_b[] =
 	{
-		-.25f, -.25f, .25f, -.25f, .25f, .25f,  //triangle1
-		-.25f, -.25f, .25f, .25f, -.25f, .25f   //triangle2
+		-.375f, -.375f, .375f, -.375f, .375f, .375f,  //triangle1
+		-.375f, -.375f, .375f, .375f, -.375f, .375f   //triangle2
 	};
 
 	glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_b);
 	glEnableVertexAttribArray(program.positionAttribute);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+	glEnableVertexAttribArray(program.texCoordAttribute);
+
+	draw_object(model_matrix_b, ice_texture_id);
 
 
 	glDisableVertexAttribArray(program.positionAttribute);
