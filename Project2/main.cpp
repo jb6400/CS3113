@@ -60,6 +60,7 @@ const char PLAYER_2_SPRITE[] = "player-2-sprite.png";
 const char SIDE_BORDER_SPRITE[] = "side-border.png";
 const char BOT_BORDER_SPRITE[] = "top-bot-border.png";
 const char TOP_BORDER_SPRITE[] = "top-border.png";
+const char INSTRUCTION_SPRITE[] = "instruction-screen.png";
 
 const char NUM_0[] = "numbers-sprite-0.png";
 const char NUM_1[] = "numbers-sprite-1.png";
@@ -76,7 +77,7 @@ GLuint ice_texture_id, player_1_texture_id, player_2_texture_id,
 	   side_border_texture_id, bot_border_texture_id, top_border_texture_id,
 	   num_0_texture_id, num_1_texture_id, num_2_texture_id, num_3_texture_id,
 	   num_4_texture_id, num_5_texture_id, num_6_texture_id, num_7_texture_id,
-	   num_8_texture_id, num_9_texture_id;
+	   num_8_texture_id, num_9_texture_id, instruction_texture_id;
 
 const int NUMBER_OF_TEXTURES = 1; // to be generated, that is
 const GLint LEVEL_OF_DETAIL = 0;  // base image level; Level n is the nth mipmap reduction image
@@ -84,6 +85,8 @@ const GLint TEXTURE_BORDER = 0;   // this value MUST be zero
 
 int SCORE_P1 = 0;
 int SCORE_P2 = 0;
+
+bool game_start = false;
 
 GLuint load_texture(const char* filepath) {
 	int width, height, number_of_components;
@@ -130,6 +133,7 @@ void initialise() {
 	side_border_texture_id = load_texture(SIDE_BORDER_SPRITE);
 	bot_border_texture_id = load_texture(BOT_BORDER_SPRITE);
 	top_border_texture_id = load_texture(TOP_BORDER_SPRITE);
+	instruction_texture_id = load_texture(INSTRUCTION_SPRITE);
 
 	num_0_texture_id = load_texture(NUM_0);
 	num_1_texture_id = load_texture(NUM_1);
@@ -196,6 +200,7 @@ void process_input() {
 						BALL_Y_TRANS = 1.f;
 						is_game_over = false;
 					}
+					if (!game_start) { game_start = true; }
 					break;
 				default:
 					break;
@@ -228,14 +233,6 @@ bool check_collision(glm::vec3& position_1, glm::vec3& position_2, const float& 
 	return sqrt(pow(position_2[0] - position_1[0], 2) + 
 		   pow(position_2[1] - position_1[1], 2)) < collsion_dist;
 }
-/*bool check_collision2(glm::vec3& position_1, glm::vec3& position_2, const float& collsion_dist) {
-	_RPTF2(_CRT_WARN, "check_collision2 returns x: %f\n", sqrt(pow(position_2[0] - position_1[0], 2)));
-	_RPTF2(_CRT_WARN, "check_collision2 returns y: %f\n", sqrt(pow(position_2[1] - position_1[1], 2)));
-	return sqrt(pow(position_2[0] - position_1[0], 2) +
-		pow(position_2[1] - position_1[1], 2)) < collsion_dist;
-	//return (sqrt(pow(position_2[0] - position_1[0], 2)) < MINIMUM_COLLISION_DISTANCE) ||
-	//	(sqrt(pow(position_2[1] - position_1[1], 2)) < MINIMUM_COLLISION_DISTANCE);
-}*/
 void update() {
 	//for delta time
 	float ticks = (float)SDL_GetTicks() / 1000.f; // get the current number of ticks
@@ -602,6 +599,23 @@ void render() {
 	glEnableVertexAttribArray(program.texCoordAttribute);
 
 	draw_object(model_matrix_border, sprite_num_sp2_0);
+
+	//instructions
+	if (!game_start) {
+		float vertices_inst[] =
+		{
+			-4.25f, -2.65f, 4.25f, -2.65f, 4.25f, 2.65f,  //triangle1
+			-4.25f, -2.65f, 4.25f, 2.65f, -4.25f, 2.65f  //triangle2
+		};
+
+		glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices_inst);
+		glEnableVertexAttribArray(program.positionAttribute);
+
+		glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texture_coordinates);
+		glEnableVertexAttribArray(program.texCoordAttribute);
+
+		draw_object(model_matrix_border, instruction_texture_id);
+	}
 	
 	glDisableVertexAttribArray(program.positionAttribute);
 	//STEP 4
