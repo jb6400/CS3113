@@ -13,6 +13,7 @@
 #include "ShaderProgram.h"
 #include "stb_image.h"
 
+//variables for window set up
 const int WINDOW_WIDTH = 640,
 WINDOW_HEIGHT = 480;
 
@@ -29,14 +30,20 @@ const char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
 
 
 SDL_Window* display_window;
+
+ShaderProgram program;
+
+//bools
 bool game_is_running = true;
 bool ball_moving = false;
 bool is_game_over = false;
+bool game_start = false;
 
-ShaderProgram program;
+//matricies
 glm::mat4 view_matrix, model_matrix_p1, model_matrix_p2, 
 		  model_matrix_b, model_matrix_border, projection_matrix;
 
+//vectors
 glm::vec3 player1_position = glm::vec3(0, 0, 0);
 glm::vec3 player2_position = glm::vec3(0, 0, 0);
 glm::vec3 ball_position = glm::vec3(0, 0, 0);
@@ -45,6 +52,7 @@ glm::vec3 player1_movement = glm::vec3(0, 0, 0);
 glm::vec3 player2_movement = glm::vec3(0, 0, 0);
 glm::vec3 ball_movement = glm::vec3(0, 0, 0);
 
+//floats and ints (numbers)
 float previous_ticks = 0.f;
 
 const float player_speed = 2.5f;
@@ -54,6 +62,10 @@ const float MINIMUM_COLLISION_DISTANCE_PLAYER = 1.f;
 float BALL_X_TRANS = .5f;
 float BALL_Y_TRANS = 1.f;
 
+int SCORE_P1 = 0;
+int SCORE_P2 = 0;
+
+//sprites
 const char ICE_SPRITE[] = "Large_Frost_Sprite_0.png";
 const char PLAYER_1_SPRITE[] = "player-1-sprite.png";
 const char PLAYER_2_SPRITE[] = "player-2-sprite.png";
@@ -83,11 +95,36 @@ const int NUMBER_OF_TEXTURES = 1; // to be generated, that is
 const GLint LEVEL_OF_DETAIL = 0;  // base image level; Level n is the nth mipmap reduction image
 const GLint TEXTURE_BORDER = 0;   // this value MUST be zero
 
-int SCORE_P1 = 0;
-int SCORE_P2 = 0;
+//prototypes
+GLuint load_texture(const char* filepath);
+void initialise();
+void process_input();
+bool check_collision(glm::vec3& position_1, glm::vec3& position_2, const float& collsion_dist);
+void update();
+void draw_object(glm::mat4& object_model_matrix, GLuint& object_texture_id);
+GLuint sprite_calc(int expression);
+void render();
+void shutdown();
 
-bool game_start = false;
+//functions
+int main(int argc, char* argv[]) {
+	//STEP 1: Get everything set up and ready
+	initialise();
 
+	//STEP 2: Game loop
+	while (game_is_running) {
+		//STEP 3: Check for any input from the user
+		process_input();
+		//STEP 4: Update our scene from user input
+		update();
+		//STEP 5: Get those updates onto current screen
+		render();
+	}
+
+	//STEP 6: Shut engine down
+	shutdown();
+	return 0;
+}
 GLuint load_texture(const char* filepath) {
 	int width, height, number_of_components;
 	unsigned char* image = stbi_load(filepath, &width, &height, &number_of_components, STBI_rgb_alpha);
@@ -248,11 +285,13 @@ void update() {
 	glm::vec3 player1_global_pos = glm::vec3(-3.5, player1_position.y, 0);
 	glm::vec3 player2_global_pos = glm::vec3(3.5, player2_position.y, 0);
 
+	//if the game is happening
 	if(ball_moving == true){
 
 		glm::vec3 b_m_x(ball_position.x, 0, 0);
 		glm::vec3 b_m_y(0, ball_position.y, 0);
 
+		//bounce
 		if (check_collision(b_m_y, top_border_vec, MINIMUM_COLLISION_DISTANCE_BALL) ||
 			check_collision(b_m_y, bot_border_vec, MINIMUM_COLLISION_DISTANCE_BALL))
 		{
@@ -262,13 +301,14 @@ void update() {
 		bool collision_right = check_collision(b_m_x, right_border_vec, MINIMUM_COLLISION_DISTANCE_BALL);
 		bool collision_left = check_collision(b_m_x, left_border_vec, MINIMUM_COLLISION_DISTANCE_BALL);
 
+		//determines loss
 		if (collision_right || collision_left)
 		{
-			//add lose condition
-			//BALL_X_TRANS = -1.f * BALL_X_TRANS;
 			BALL_X_TRANS = 0.f;
 			BALL_Y_TRANS = 0.f;
 			is_game_over = true;
+
+			//whose loss?
 			if (collision_right) {
 				SCORE_P1++;
 			}
@@ -278,6 +318,7 @@ void update() {
 			ball_moving = false;
 		}
 
+		//ball colliding with paddle
 		if (check_collision(ball_position, player1_global_pos, MINIMUM_COLLISION_DISTANCE_BALL) ||
 			check_collision(ball_position, player2_global_pos, MINIMUM_COLLISION_DISTANCE_BALL)) {
 			BALL_X_TRANS = -1.f * BALL_X_TRANS;
@@ -286,19 +327,15 @@ void update() {
 
 		ball_movement = glm::vec3(BALL_X_TRANS, BALL_Y_TRANS, 0);
 
-		if (glm::length(ball_movement) > 1.0f)
-		{
-			ball_movement = glm::normalize(ball_movement);
-		}
-
 		ball_position += ball_movement * player_speed * delta_time;
-		//_RPTF2(_CRT_WARN, "ball_position: %f, %f\n", ball_position.x, ball_position.y);
+
 		model_matrix_b = glm::mat4(1.0f);
 		model_matrix_b = glm::translate(model_matrix_b, ball_position);
 	}
 
 	//player
 
+	//prevents player from moving past border
 	if (check_collision(player1_position, top_border_vec, MINIMUM_COLLISION_DISTANCE_PLAYER) ||
 		check_collision(player1_position, bot_border_vec, MINIMUM_COLLISION_DISTANCE_PLAYER))
 	{
@@ -328,8 +365,10 @@ void draw_object(glm::mat4& object_model_matrix, GLuint& object_texture_id)
 {
 	program.SetModelMatrix(object_model_matrix);
 	glBindTexture(GL_TEXTURE_2D, object_texture_id);
-	glDrawArrays(GL_TRIANGLES, 0, 6); // we are now drawing 2 triangles, so we use 6 instead of 3
+	glDrawArrays(GL_TRIANGLES, 0, 6); 
 }
+
+//function that determines what sprite to draw based on expression (related to score and nums)
 GLuint sprite_calc(int expression) {
 	switch (expression) {
 	case 0:
@@ -368,11 +407,8 @@ GLuint sprite_calc(int expression) {
 	}
 }
 void render() {
-	//STEP 1
 	glClear(GL_COLOR_BUFFER_BIT);
-	//STEP 2
 	program.SetModelMatrix(model_matrix_p1);
-	//STEP 3
 
 	//player 1 sprite
 	float vertices_p1[] = 
@@ -474,7 +510,6 @@ void render() {
 	draw_object(model_matrix_border, side_border_texture_id);
 
 	//ball
-
 	program.SetModelMatrix(model_matrix_b);
 
 	float vertices_b[] =
@@ -498,6 +533,7 @@ void render() {
 
 	GLuint sprite_num_sp1_0, sprite_num_sp1_1, sprite_num_sp1_2;
 
+	//depending on curr score, draw correct sprites
 	sprite_num_sp1_0 = sprite_calc(SCORE_P1 % 10);
 	sprite_num_sp1_1 = sprite_calc((SCORE_P1 / 10) % 10);
 	sprite_num_sp1_2 = sprite_calc(SCORE_P1 / 100);
@@ -551,6 +587,7 @@ void render() {
 
 	GLuint sprite_num_sp2_0, sprite_num_sp2_1, sprite_num_sp2_2;
 
+	//depending on curr score, draw correct sprites
 	sprite_num_sp2_0 = sprite_calc(SCORE_P2 % 10);
 	sprite_num_sp2_1 = sprite_calc((SCORE_P2 / 10) % 10);
 	sprite_num_sp2_2 = sprite_calc(SCORE_P2 / 100);
@@ -618,26 +655,7 @@ void render() {
 	}
 	
 	glDisableVertexAttribArray(program.positionAttribute);
-	//STEP 4
+	
 	SDL_GL_SwapWindow(display_window);
 }
 void shutdown() { SDL_Quit(); }
-
-int main(int argc, char* argv[]) {
-	//STEP 1: Get everything set up and ready
-	initialise();
-
-	//STEP 2: Game loop
-	while (game_is_running) {
-		//STEP 3: Check for any input from the user
-		process_input();
-		//STEP 4: Update our scene from user input
-		update();
-		//STEP 5: Get those updates onto current screen
-		render();
-	}
-
-	//STEP 6: Shut engine down
-	shutdown();
-	return 0;
-}
