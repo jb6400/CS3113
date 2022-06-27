@@ -65,6 +65,9 @@ float BALL_Y_TRANS = 1.f;
 int SCORE_P1 = 0;
 int SCORE_P2 = 0;
 
+int DELAY_X = 0;
+int DELAY_Y = 0;
+
 //sprites
 const char ICE_SPRITE[] = "Large_Frost_Sprite_0.png";
 const char PLAYER_1_SPRITE[] = "player-1-sprite.png";
@@ -282,8 +285,8 @@ void update() {
 	glm::vec3 right_border_vec = glm::vec3(4.875f, 0, 0);
 	glm::vec3 left_border_vec = glm::vec3(-4.875f, 0, 0);
 
-	glm::vec3 player1_global_pos = glm::vec3(-3.5, player1_position.y, 0);
-	glm::vec3 player2_global_pos = glm::vec3(3.5, player2_position.y, 0);
+	glm::vec3 player1_global_pos = glm::vec3(-3.825, player1_position.y, 0);
+	glm::vec3 player2_global_pos = glm::vec3(3.825, player2_position.y, 0);
 
 	//if the game is happening
 	if(ball_moving == true){
@@ -292,10 +295,12 @@ void update() {
 		glm::vec3 b_m_y(0, ball_position.y, 0);
 
 		//bounce
-		if (check_collision(b_m_y, top_border_vec, MINIMUM_COLLISION_DISTANCE_BALL) ||
-			check_collision(b_m_y, bot_border_vec, MINIMUM_COLLISION_DISTANCE_BALL))
+		if ((check_collision(b_m_y, top_border_vec, MINIMUM_COLLISION_DISTANCE_BALL) ||
+			check_collision(b_m_y, bot_border_vec, MINIMUM_COLLISION_DISTANCE_BALL)) &&
+			DELAY_Y == 0)
 		{
 			BALL_Y_TRANS = -1.f * BALL_Y_TRANS;
+			DELAY_Y = 15;
 		}
 
 		bool collision_right = check_collision(b_m_x, right_border_vec, MINIMUM_COLLISION_DISTANCE_BALL);
@@ -319,10 +324,12 @@ void update() {
 		}
 
 		//ball colliding with paddle
-		if (check_collision(ball_position, player1_global_pos, MINIMUM_COLLISION_DISTANCE_BALL) ||
-			check_collision(ball_position, player2_global_pos, MINIMUM_COLLISION_DISTANCE_BALL)) {
+		if ((check_collision(ball_position, player1_global_pos, MINIMUM_COLLISION_DISTANCE_BALL) ||
+			check_collision(ball_position, player2_global_pos, MINIMUM_COLLISION_DISTANCE_BALL)) &&
+			DELAY_X == 0) {
 			BALL_X_TRANS = -1.f * BALL_X_TRANS;
 			BALL_Y_TRANS = -1.f * BALL_Y_TRANS;
+			DELAY_X = 15;
 		}
 
 		ball_movement = glm::vec3(BALL_X_TRANS, BALL_Y_TRANS, 0);
@@ -331,6 +338,9 @@ void update() {
 
 		model_matrix_b = glm::mat4(1.0f);
 		model_matrix_b = glm::translate(model_matrix_b, ball_position);
+
+		if (DELAY_X > 0) { DELAY_X--; }
+		if (DELAY_Y > 0) { DELAY_Y--; }
 	}
 
 	//player
