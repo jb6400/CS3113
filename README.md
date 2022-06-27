@@ -7,6 +7,7 @@ Hello! This is a compilation of work I have done over the course INTRO TO GAME P
 
 ## Project 2 : Pong
 ![Project 2 Demo](demo_gifs/Project_2_demo.gif)
+
 This is a two player game, and the controls are as follows:
 
 WS -- Player 1 Movement
