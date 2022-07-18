@@ -13,8 +13,76 @@ Object::Object()
     model_matrix = glm::mat4(1.0f);
 }
 
+Object::~Object()
+{
+    delete[] animation_left;
+    delete[] animation_right;
+    delete[] animations;
+}
+
+void Object::draw_sprite_from_texture_atlas(ShaderProgram* program, GLuint textureID, int index) 
+{
+    // Step 1: Calculate the UV location of the indexed frame
+    float u_coord = (float)(index % animation_cols) / (float)animation_cols;
+    float v_coord = (float)(index / animation_cols) / (float)animation_rows;
+
+    // Step 2: Calculate its UV size
+    float width = 1.0f / (float)animation_cols;
+    float height = 1.0f / (float)animation_rows;
+
+    // Step 3: Just as we have done before, match the texture coordinates to the vertices
+    float tex_coords[] =
+    {
+        u_coord, v_coord + height, u_coord + width, v_coord + height, u_coord + width, v_coord,
+        u_coord, v_coord + height, u_coord + width, v_coord, u_coord, v_coord
+    };
+
+    float vertices[] =
+    {
+        dir * -0.5, -0.5, dir * 0.5, -0.5, dir * 0.5, 0.5,
+        dir * -0.5, -0.5, dir * 0.5,  0.5, dir * -0.5, 0.5
+    };
+    
+    
+    //_RPTF2(_CRT_WARN, "Left anim: %f\n", 1);
+
+    // Step 4: And render
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    glVertexAttribPointer(program->positionAttribute, 2, GL_FLOAT, false, 0, vertices);
+    glEnableVertexAttribArray(program->positionAttribute);
+
+    glVertexAttribPointer(program->texCoordAttribute, 2, GL_FLOAT, false, 0, tex_coords);
+    glEnableVertexAttribArray(program->texCoordAttribute);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glDisableVertexAttribArray(program->positionAttribute);
+    glDisableVertexAttribArray(program->texCoordAttribute);
+}
+
 void Object::update(float delta_time, Object* colliders, int num_collider)
 {
+    if (animation_indices != NULL)
+    {
+        if (glm::length(acceleration) != 0)
+        {
+            animation_time += delta_time;
+            float frames_per_second = (float)1 / SECONDS_PER_FRAME;
+
+            if (animation_time >= frames_per_second)
+            {
+                animation_time = 0.0f;
+                animation_index++;
+
+                if (animation_index >= animation_frames)
+                {
+                    animation_index = 0;
+                }
+            }
+        }
+    }
+
     //collision checker
     for (int i = 0; i < num_collider; i++)
     {
@@ -22,16 +90,27 @@ void Object::update(float delta_time, Object* colliders, int num_collider)
 
         if (check_collision(collider))
         {
+            in_game = false;
+
             float y_distance = fabs(position.y - collider->position.y);
             float y_overlap = fabs(y_distance - (height / 2.0f) - (collider->height / 2.0f));
+
             if (velocity.y > 0) {
                 position.y -= y_overlap;
                 velocity.y = 0;
             }
+
             else if (velocity.y < 0) {
                 position.y += y_overlap;
                 velocity.y = 0;
             }
+
+            if (collider->type == WIN)
+            {
+                is_win = true;
+            }
+
+            acceleration.x = 0;
         }
     }
 
@@ -57,6 +136,12 @@ void Object::update(float delta_time, Object* colliders, int num_collider)
 void Object::render(ShaderProgram* program) 
 {
     program->SetModelMatrix(model_matrix);
+
+    if (animation_indices != NULL)
+    {
+        draw_sprite_from_texture_atlas(program, textureID, animation_indices[animation_index]);
+        return;
+    }
 
     float vertices[] = { -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5 };
     float texCoords[] = { 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
@@ -108,3 +193,15 @@ void Object::set_height(float new_height) { height = new_height; }
 
 ObjectType Object::get_type() { return type; }
 void Object::set_type(ObjectType new_type) { type = new_type; }
+
+void Object::set_anim_cols(int num) { animation_cols = num; }
+void Object::set_anim_rows(int num) { animation_rows = num; }
+
+void Object::set_indicies(int* new_ind) { animation_indices = new_ind; }
+void Object::set_anim_frames(int num) { animation_frames = num; }
+
+void Object::set_dir(float new_dir) { dir = new_dir; }
+
+bool Object::get_state() { return is_win; }
+bool Object::get_status() { return in_game; }
+

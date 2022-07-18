@@ -13,11 +13,15 @@
 #include "glm/mat4x4.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "ShaderProgram.h"
-
+#include <vector>
 enum ObjectType {WIN, LOSE, PLAYER};
 
 class Object {
 private:
+    int* animation_right = NULL; // move to the right
+    int* animation_left = NULL; // move to the left
+    int* animation_idle = NULL;
+
     glm::vec3 position;
     glm::vec3 movement;
     float speed;
@@ -34,10 +38,37 @@ private:
 
     ObjectType type;
 
-public:
-    Object();
-    //~Object();
+    int* animation_indices = NULL;
 
+    int animation_frames = 0;
+    int animation_index = 0;
+
+    float animation_time = 0.0f;
+
+    int animation_cols = 0;
+    int animation_rows = 0;
+
+    float dir = 1;
+
+    bool is_win = false;
+    bool in_game = true;
+
+public:
+    int** animations = new int* [3]
+    {
+        animation_left, animation_right, animation_idle
+    };
+
+    static const int SECONDS_PER_FRAME = 4;
+
+    static const int LEFT = 0,
+                     RIGHT = 1,
+                     IDLE = 2;
+
+    Object();
+    ~Object();
+
+    void draw_sprite_from_texture_atlas(ShaderProgram* program, GLuint textureID, int index);
     void update(float delta_time, Object* colliders, int num_collider);
     void render(ShaderProgram* program);
 
@@ -69,4 +100,15 @@ public:
 
     ObjectType get_type();
     void set_type(ObjectType new_type);
+
+    void set_anim_cols(int num);
+    void set_anim_rows(int num);
+
+    void set_indicies(int* new_ind);
+    void set_anim_frames(int num);
+
+    void set_dir(float new_dir);
+
+    bool get_state();
+    bool get_status();
 };
