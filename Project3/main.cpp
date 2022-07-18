@@ -340,11 +340,11 @@ void render()
     {
         if (state.player->get_state())
         {
-            DrawText(&program, font_texture_id, "You Win!", .5f, 0.25f, glm::vec3(-2.5f, 1.5f, 0.f));
+            DrawText(&program, font_texture_id, "Mission Successful!", .5f, 0.01f, glm::vec3(-4.5f, 1.5f, 0.f));
         }
         else
         {
-            DrawText(&program, font_texture_id, "Try Again!", .5f, 0.25f, glm::vec3(-3.25f, 1.5f, 0.f));
+            DrawText(&program, font_texture_id, "Mission Failed", .5f, 0.01f, glm::vec3(-3.25f, 1.5f, 0.f));
         }
     }
 
