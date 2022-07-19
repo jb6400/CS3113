@@ -24,8 +24,6 @@
 
 const int WINDOW_WIDTH = 640;
 const int WINDOW_HEIGHT = 480;
-const float BG_RED = 0.1922f, BG_BLUE = 0.549f, BG_GREEN = 0.9059f;
-const float BG_OPACITY = 1.0f;
 
 const int VIEWPORT_X = 0,
           VIEWPORT_Y = 0,
@@ -42,7 +40,7 @@ ShaderProgram program;
 
 bool game_is_running = true;
 
-glm::mat4 view_matrix, model_matrix, projection_matrix;
+glm::mat4 view_matrix, bg_model_matrix, projection_matrix;
 
 float previous_ticks= 0;
 
@@ -67,18 +65,39 @@ const char DIRT_SPRITE[] = "dirt_block.png";
 const char LOSE_SPRITE[] = "grass_lose_block.png";
 const char WIN_SPRITE[] = "grass_win_block.png";
 const char FONT_SPRITE[] = "pixel_font.png";
+const char BG_SPRITE[] = "background_ll_big.png";
 
 GLuint player_texture_id, dirt_texture_id, lose_texture_id, win_texture_id,
-       font_texture_id;
+       font_texture_id, bg_texture_id;
 
 const int FONTBANK_SIZE = 16;
 
+int timer = 0;
+
+//prototypes
 GLuint load_texture(const char* filepath);
 void initialise();
 void process_input();
 void update();
 void render();
 void shutdown();
+
+//functions
+int main(int argc, char* argv[])
+{
+    initialise();
+
+    while (game_is_running)
+    {
+        process_input();
+        update();
+        render();
+    }
+
+    shutdown();
+
+    return 0;
+}
 
 GLuint load_texture(const char* filepath) 
 {
@@ -121,6 +140,7 @@ void initialise()
     program.Load(V_SHADER_PATH, F_SHADER_PATH); // Loads up shaders
 
     //matrix definition
+    bg_model_matrix = glm::mat4(1.f);
     view_matrix = glm::mat4(1.0f);  // Defines the position (location and orientation) of the camera
     projection_matrix = glm::ortho(-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f);  // Defines the characteristics of your camera, such as clip planes, field of view, projection method etc.
 
@@ -133,6 +153,7 @@ void initialise()
     lose_texture_id = load_texture(LOSE_SPRITE);
     win_texture_id = load_texture(WIN_SPRITE);
     font_texture_id = load_texture(FONT_SPRITE);
+    bg_texture_id = load_texture(BG_SPRITE);
 
     state.player = new Object();
     state.player->set_speed(1.0f);
@@ -175,8 +196,6 @@ void initialise()
     program.SetViewMatrix(view_matrix);
 
     glUseProgram(program.programID);
-
-    glClearColor(BG_RED, BG_BLUE, BG_GREEN, BG_OPACITY);
 }
 
 void process_input() 
@@ -191,6 +210,20 @@ void process_input()
 		case SDL_WINDOWEVENT_CLOSE:
 			game_is_running = false;
 			break;
+        case SDL_KEYDOWN:
+            switch (event.key.keysym.sym) {
+                if (!(state.player->get_status())) {
+                    case SDLK_SPACE:
+                        state.player->set_state(false);
+                        state.player->set_status(true);
+                        state.player->set_fuel(5.f);
+                        state.player->set_position(glm::vec3(-4.5f, 3.0f, 0.0f));
+                        break;
+                }
+
+            default:
+                break;
+            }
         default:
 			break;
 		}
@@ -198,11 +231,18 @@ void process_input()
 
 	const Uint8* key_state = SDL_GetKeyboardState(NULL);
 
-    if (state.player->get_status()) 
+    if (state.player->get_status() && state.player->get_fuel() >= 0.f) 
     {
         if (key_state[SDL_SCANCODE_D])
         {
             curr_acc.x = 70.f;
+
+            if(timer == 0)
+            {
+                state.player->sub_fuel();
+                timer = 5;
+            }
+
             state.player->set_acceleration(curr_acc);
             state.player->set_dir(1);
             state.player->set_indicies(state.player->animations[state.player->RIGHT]);
@@ -210,6 +250,13 @@ void process_input()
         else if (key_state[SDL_SCANCODE_A])
         {
             curr_acc.x = -70.f;
+
+            if (timer == 0)
+            {
+                state.player->sub_fuel();
+                timer = 5;
+            }
+
             state.player->set_acceleration(curr_acc);
             state.player->set_dir(-1);
             state.player->set_indicies(state.player->animations[state.player->LEFT]);
@@ -259,6 +306,12 @@ void update()
                 state.player->set_acceleration(curr_acc);
             }
         }
+
+        if (timer > 0) 
+        {
+            timer -= 1;
+        }
+
         state.player->update(FIXED_TIMESTEP, state.platform, PLATFORM_COUNT);
         delta_time -= FIXED_TIMESTEP;
     }
@@ -332,9 +385,32 @@ void render()
 {
     glClear(GL_COLOR_BUFFER_BIT);
 
+    //drawing background seperately because it's not like the objects
+    program.SetModelMatrix(bg_model_matrix);
+
+    float vertices[] = { -5.f, -3.75f, 5.f, -3.75f, 5.f, 3.75f, -5.f, -3.75f, 5.f, 3.75f, -5.f, 3.75f };
+    float texCoords[] = { 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0 };
+
+    glBindTexture(GL_TEXTURE_2D, bg_texture_id);
+
+    glVertexAttribPointer(program.positionAttribute, 2, GL_FLOAT, false, 0, vertices);
+    glEnableVertexAttribArray(program.positionAttribute);
+
+    glVertexAttribPointer(program.texCoordAttribute, 2, GL_FLOAT, false, 0, texCoords);
+    glEnableVertexAttribArray(program.texCoordAttribute);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glDisableVertexAttribArray(program.positionAttribute);
+    glDisableVertexAttribArray(program.texCoordAttribute);
+
+
+    //rendering our objects
     state.player->render(&program);
 
     for (int i = 0; i < PLATFORM_COUNT; i++) { state.platform[i].render(&program); }
+
+    DrawText(&program, font_texture_id, "Fuel:" + std::to_string(state.player->get_fuel()), .5f, 0.01f, glm::vec3(-4.5f, 3.25f, 0.f));
 
     if (!state.player->get_status()) 
     {
@@ -354,21 +430,7 @@ void render()
 void shutdown() 
 { 
     delete state.player;
+    delete [] state.platform;
+
     SDL_Quit(); 
-}
-
-int main(int argc, char* argv[]) 
-{
-    initialise();
-
-    while (game_is_running)
-    {
-        process_input();
-        update();
-        render();
-    }
-
-    shutdown();
-
-    return 0;
 }

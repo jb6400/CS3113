@@ -53,6 +53,8 @@ private:
     bool is_win = false;
     bool in_game = true;
 
+    float fuel = 5.f;
+
 public:
     int** animations = new int* [3]
     {
@@ -110,5 +112,12 @@ public:
     void set_dir(float new_dir);
 
     bool get_state();
+    void set_state(bool new_state);
+
     bool get_status();
+    void set_status(bool new_status);
+
+    float get_fuel();
+    void sub_fuel();
+    void set_fuel(float new_fuel);
 };

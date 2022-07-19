@@ -109,23 +109,17 @@ void Object::update(float delta_time, Object* colliders, int num_collider)
             {
                 is_win = true;
             }
-
+            set_indicies(animations[IDLE]);
             acceleration.x = 0;
         }
     }
 
     // Our character moves from left to right, so they need an initial velocity
     velocity.x = movement.x * speed;
+
     // Now we add the rest of the gravity physics
     velocity += acceleration * delta_time;
-    //_RPTF2(_CRT_WARN, "velocity x, y, z: %f % f %f\n", 
-    //    velocity.x, velocity.y, velocity.z);
-    //_RPTF2(_CRT_WARN, "acceleration x, y, z: %f % f %f\n", 
-    //    acceleration.x, acceleration.y, acceleration.z);
     position += velocity * delta_time;
-
-    //_RPTF2(_CRT_WARN, "position x, y, z: %f % f %f\n",
-    //    position.x, position.y, position.z);
 
     model_matrix = glm::mat4(1.f);
     model_matrix = glm::translate(model_matrix, position);
@@ -203,5 +197,11 @@ void Object::set_anim_frames(int num) { animation_frames = num; }
 void Object::set_dir(float new_dir) { dir = new_dir; }
 
 bool Object::get_state() { return is_win; }
-bool Object::get_status() { return in_game; }
+void Object::set_state(bool new_state) { is_win = new_state; }
 
+bool Object::get_status() { return in_game; }
+void Object::set_status(bool new_status) { in_game = new_status; }
+
+float Object::get_fuel() { return fuel; }
+void Object::sub_fuel() { fuel -= 0.1; }
+void Object::set_fuel(float new_fuel) { fuel = new_fuel; }
