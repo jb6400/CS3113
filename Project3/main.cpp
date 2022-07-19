@@ -422,6 +422,9 @@ void render()
         {
             DrawText(&program, font_texture_id, "Mission Failed", .5f, 0.01f, glm::vec3(-3.25f, 1.5f, 0.f));
         }
+
+        DrawText(&program, font_texture_id, "Press Space to play", .5f, 0.01f, glm::vec3(-4.5f, 0.f, 0.f));
+        DrawText(&program, font_texture_id, "again", .5f, 0.01f, glm::vec3(-1.f, -1.f, 0.f));
     }
 
     SDL_GL_SwapWindow(display_window);
