@@ -15,3 +15,12 @@ WS -- Player 1 Movement
 Up/Down Keys -- Player 2 Movement
 
 Space -- To start/restart the game
+
+## Project 3 : Lunar Lander
+![Project 2 Demo](demo_gifs/Project_3_demo.gif)
+
+This is a simple single player game, where you, a magical cat, must land on the safe green grass to win! The controls are as follows:
+
+AD -- Player Movement
+
+Space -- To restart the game
