@@ -18,8 +18,6 @@ public:
     int ENEMY_COUNT = 3;
     int AMMO = 20;
 
-    //Level();
-    //Level(unsigned int* NEW_LEVEL_DATA, int size);
     Level(unsigned int* NEW_LEVEL_DATA, int size_l,
           glm::vec3* NEW_OBJ_POS, int size_o);
 

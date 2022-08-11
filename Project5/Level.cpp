@@ -11,27 +11,6 @@ const char ENEMY_FILEPATH[] = "Ghostie_64.png";
 const char BULLET_FILEPATH[] = "Zoella_Shuriken.png";
 const char ENEMY_BULLET_FILEPATH[] = "Zoella_Spike_Proj.png";
 
-//Level::Level() 
-//{
-//    player_init_pos = glm::vec3(2.0f, 0.0f, 0.0f);
-//    player_retry_pos = glm::vec3(2.f, -4.f, 0.f);
-//
-//    enem1_init_pos = glm::vec3(4.5f, -3.0f, 0.0f);
-//    enem2_init_pos = glm::vec3(10.f, -4.0f, 0.0f);
-//    enem3_init_pos = glm::vec3(10.5f, -1.0f, 0.0f);
-//}
-
-//Level::Level(unsigned int* NEW_LEVEL_DATA, int size)
-//{
-//    for (int i = 0; i < size; i++) LEVEL_DATA[i] = NEW_LEVEL_DATA[i];
-//    player_init_pos = glm::vec3(2.0f, 0.0f, 0.0f);
-//    player_retry_pos = glm::vec3(2.f, -4.f, 0.f);
-//
-//    enem1_init_pos = glm::vec3(4.5f, -3.0f, 0.0f);
-//    enem2_init_pos = glm::vec3(10.f, -4.0f, 0.0f);
-//    enem3_init_pos = glm::vec3(10.5f, -1.0f, 0.0f);
-//}
-
 Level::Level(unsigned int* NEW_LEVEL_DATA, int size_l,
              glm::vec3* NEW_OBJ_POS, int size_o)
 {
@@ -52,8 +31,8 @@ Level::~Level()
 
     if (!(state.bullets == NULL))  delete[]  this->state.bullets;
     if (!(state.enemy_bullets == NULL))  delete[]  this->state.enemy_bullets;
-    //Mix_FreeChunk(this->state.jump_sfx);
-    //Mix_FreeMusic(this->state.bgm);
+    Mix_FreeChunk(this->state.jump_sfx);
+    Mix_FreeMusic(this->state.bgm);
 }
 
 void Level::initialise()

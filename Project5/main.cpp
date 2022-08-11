@@ -70,6 +70,8 @@ bool in_game = true;
 
 int level_num = 0;
 
+int lives = 3;
+
 GLuint text_texture_id, background_texture_id;
 
 glm::vec3 OBJECT_POS[3][5]
@@ -313,6 +315,7 @@ void update()
                 if (curr_lives - 1 > 0)
                 {
                     curr_scene->state.player->set_lives(curr_lives - 1);
+                    lives--;
                     curr_scene->restart();
                     return;
                 }
@@ -333,6 +336,7 @@ void update()
                     if (curr_scene->get_id() < 3)
                     {
                         switch_to_scene(levels[++level_num]);
+                        curr_scene->state.player->set_lives(lives);
                         return;
                     }
                     is_win = true;
