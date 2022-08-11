@@ -28,9 +28,9 @@ struct GameState
     Object* bullets = NULL;
     Object* enemy_bullets = NULL;
 
-    Mix_Music* bgm;
-    Mix_Chunk* jump_sfx;
-    Mix_Chunk* enemy_die_sfx;
+    Mix_Music* bgm = NULL;
+    Mix_Chunk* jump_sfx = NULL;
+    Mix_Chunk* enemy_die_sfx = NULL;
 
     int next_scene_id;
 };

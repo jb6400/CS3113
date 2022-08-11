@@ -31,8 +31,9 @@ Level::~Level()
 
     if (!(state.bullets == NULL))  delete[]  this->state.bullets;
     if (!(state.enemy_bullets == NULL))  delete[]  this->state.enemy_bullets;
-    Mix_FreeChunk(this->state.jump_sfx);
-    Mix_FreeMusic(this->state.bgm);
+    if(!(state.jump_sfx == NULL)) Mix_FreeChunk(this->state.jump_sfx);
+    if (!(state.bgm == NULL)) Mix_FreeMusic(this->state.bgm);
+    if (!(state.enemy_die_sfx == NULL)) Mix_FreeChunk(this->state.enemy_die_sfx);
 }
 
 void Level::initialise()
