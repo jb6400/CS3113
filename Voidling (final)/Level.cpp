@@ -175,9 +175,9 @@ void Level::render(ShaderProgram* program)
 {
     state.map->render(program);
 
-    state.player->render(program);
     state.pet->render(program);
     for(int i = 0; i < NUM_ANIM + 1; i++) state.enemies[i].render(program);
+    state.player->render(program);
     /*state.enemies[0].render(program);*/
 }
 
