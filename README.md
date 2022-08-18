@@ -4,11 +4,11 @@ Hello! This is a compilation of work I have done over the course INTRO TO GAME P
 
 ##Table of Contents
 
-[Project 1]##Project-1--Simple-2D-Scene
-[Project 2]##Project-2--Pong
-[Project 3]##Project-3--Lunar-Lander
-[Project 4/5]##Project-4--Rise-of-the-AI-/-Platformer
-[Voidling]##Final-Project--Voidling
+[Project 1](##Project-1--Simple-2D-Scene)
+[Project 2](##Project-2--Pong)
+[Project 3](##Project-3--Lunar-Lander)
+[Project 4/5](##Project-4--Rise-of-the-AI-/-Platformer)
+[Voidling](##Final-Project--Voidling)
 
 ##Project 1 : Simple 2D Scene
 ![Project 1 Demo](demo_gifs/Project_1_demo.gif)
