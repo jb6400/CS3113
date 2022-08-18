@@ -10,6 +10,8 @@ public:
     int ENEMY_COUNT = 3;  // We can, of course, change this later
     int AMMO = 20;
 
+    ~Menu();
+
     void initialise();
     void update(float delta_time) {};
     void render(ShaderProgram* program);

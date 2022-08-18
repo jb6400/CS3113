@@ -3,6 +3,11 @@
 
 GLuint text_id;
 
+Menu::~Menu() 
+{
+    Mix_FreeMusic(this->state.bgm);
+}
+
 void Menu::initialise() 
 {
     state.next_scene_id = -1;

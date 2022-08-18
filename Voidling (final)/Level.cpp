@@ -34,6 +34,8 @@ Level::~Level()
     delete state.player;
     delete state.pet;
     delete[] state.enemies;
+    Mix_FreeChunk(this->state.click_sfx);
+    Mix_FreeChunk(this->state.meow_sfx);
 }
 
 void Level::initialise()
@@ -139,6 +141,12 @@ void Level::initialise()
     state.enemies[2].set_anim_frames(1);
     state.enemies[2].set_anim_cols(2);
     state.enemies[2].set_anim_rows(1);
+
+    //BGM and SFX
+    Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
+
+    state.click_sfx = Mix_LoadWAV("270304__littlerobotsoundfactory__collect-point-00.wav");
+    state.meow_sfx = Mix_LoadWAV("262313__steffcaffrey__cat-meow2.wav");
  } 
 
 void Level::update(float delta_time)
@@ -149,6 +157,7 @@ void Level::update(float delta_time)
         {
             state.pet->set_indicies(state.pet->animations[state.pet->SLEEP]);
             is_game_over = true;
+            Mix_HaltMusic();
         }
         state.player->update(delta_time, state.player, NULL, 0, state.map);
         state.pet->update(delta_time, state.player, state.enemies, 3, state.map);

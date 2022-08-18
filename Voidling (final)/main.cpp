@@ -233,6 +233,7 @@ void process_input()
                 {
                 case SDL_BUTTON_LEFT:
                     curr_scene->state.pet->set_button(true);
+                    Mix_PlayChannel(-1, curr_scene->state.meow_sfx, 0);
                     if (curr_scene->state.pet->get_ai_state() != RELAXING && curr_scene->state.pet->get_ai_state() != RUNNING)
                     {
                         //if (press_y >= -3.f && curr_scene->state.pet->get_level() == 1)

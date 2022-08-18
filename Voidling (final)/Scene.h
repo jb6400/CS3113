@@ -26,9 +26,9 @@ struct GameState
     Object* pet = NULL;
     Object* enemies = NULL;
 
-    Mix_Music* bgm;
-    Mix_Chunk* jump_sfx;
-    Mix_Chunk* enemy_die_sfx;
+    Mix_Music* bgm = NULL;
+    Mix_Chunk* click_sfx = NULL;
+    Mix_Chunk* meow_sfx = NULL;
 
     int next_scene_id;
 };
